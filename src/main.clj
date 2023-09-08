@@ -3,29 +3,26 @@
 (defn value [data]
   {:data data})
 
-(defn bin-op [v1 v2 op]
+(defn bin-op [op v1 v2]
   {:data    (op (:data v1)
                 (:data v2))
    :children [v1 v2]
-   :op       'op})
+   :op       op})
 
 (defn add [v1 v2]
-  (bin-op v1 v2 +))
+  (bin-op + v1 v2))
 
 (defn mul [v1 v2]
-  {:data    (* (:data v1)
-               (:data v2))
-   :children [v1 v2]
-   :op       *})
+  (bin-op * v1 v2))
 
 (comment
 
   (->Value 3 [] identity)
   (map->Value {:data 3})
 
-  (mul (value 4)
+  (clojure.pprint/pprint (mul (value 4)
        (add (value 3)
-            (value 2)))
+            (value 2))))
 
   (defn f [x]
     (- (* 3 (Math/pow x 2))
@@ -35,4 +32,5 @@
 
   (def xs (range -5 5 1/4))
   (def ys (map f xs))
+
   )
