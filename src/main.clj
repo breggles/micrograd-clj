@@ -1,12 +1,13 @@
-(ns main)
+(ns main
+  (:require [clojure.math :as m]))
 
 (defn value [v]
   {:val  v
    :grad 0})
 
-(defn bin-op [op a b]
-  {:val  (op (:val a) (:val b))
-   :kids [a b]
+(defn defop [op & params]
+  {:val  (apply op (map :val params))
+   :kids (vec params)
    :op   op
    :grad 0})
 
@@ -14,13 +15,16 @@
   (+ old other))
 
 (defn add [a b]
-  (bin-op + a b))
+  (defop + a b))
 
 (defn mul [a b]
-  (bin-op * a b))
+  (defop * a b))
+
+(defn tanh [x]
+  (defop m/tanh x))
 
 (defn backwards [expr]
-  (condp  = (:op expr)
+  (condp = (:op expr)
     nil expr
     +   (-> expr
             (assoc-in [:kids 0 :grad] (:grad expr))
@@ -35,6 +39,8 @@
     (assoc expr :grad 1)))
 
 (comment
+
+  (tanh (value 1))
 
   (propagate (mul (value -1)
                   (add (value 3)
