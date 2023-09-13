@@ -5,10 +5,10 @@
    :grad 0})
 
 (defn bin-op [op a b]
-  {:val      (op (:val a) (:val b))
-   :children [a b]
-   :op       op
-   :grad     0})
+  {:val  (op (:val a) (:val b))
+   :kids [a b]
+   :op   op
+   :grad 0})
 
 (defn mul-grad [old other]
   (+ old other))
@@ -19,17 +19,26 @@
 (defn mul [a b]
   (bin-op * a b))
 
-(defn backward [expr]
+(defn backwards [expr]
   (condp  = (:op expr)
     nil expr
     +   (-> expr
-            (assoc-in [:children 0 :grad] (:grad expr))
-            (assoc-in [:children 1 :grad] (:grad expr)))
+            (assoc-in [:kids 0 :grad] (:grad expr))
+            (assoc-in [:kids 1 :grad] (:grad expr)))
     *   (-> expr
-            (assoc-in [:children 0 :grad] (* (:grad expr) (get-in expr [:children 1 :val])))
-            (assoc-in [:children 1 :grad] (* (:grad expr) (get-in expr [:children 0 :val]))))))
+            (assoc-in [:kids 0 :grad] (* (:grad expr) (get-in expr [:kids 1 :val])))
+            (assoc-in [:kids 1 :grad] (* (:grad expr) (get-in expr [:kids 0 :val]))))))
+
+(defn propagate [expr]
+  (clojure.walk/prewalk
+    backwards
+    (assoc expr :grad 1)))
 
 (comment
+
+  (propagate (mul (value -1)
+                  (add (value 3)
+                       (value 2))))
 
   (clojure.walk/prewalk
     backward
