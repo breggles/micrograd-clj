@@ -31,6 +31,14 @@
 
 (comment
 
+  (clojure.walk/prewalk
+    backward
+    (assoc (mul (value -1)
+                (add (value 3)
+                     (value 2)))
+           :grad
+           1))
+
   (backward (assoc (mul (value 3)
                         (value 2))
                    :grad
@@ -42,9 +50,6 @@
                    1))
 
   (backward (value 3))
-
-  (->Value 3 [] identity)
-  (map->Value {:val 3})
 
   (clojure.pprint/pprint
     (mul (value 4)
