@@ -1,5 +1,5 @@
 (ns main
-  (:require [clojure.math :as m]))
+  (:require [clojure.math :as math]))
 
 (defn value [v]
   {:val  v
@@ -21,17 +21,19 @@
   (defop * a b))
 
 (defn tanh [x]
-  (defop m/tanh x))
+  (defop math/tanh x))
 
 (defn backwards [expr]
   (condp = (:op expr)
     nil expr
     +   (-> expr
-            (assoc-in [:kids 0 :grad] (:grad expr))
-            (assoc-in [:kids 1 :grad] (:grad expr)))
+            (assoc-in [:kids 0 :grad] (* (:grad expr) 1))
+            (assoc-in [:kids 1 :grad] (* (:grad expr) 1)))
     *   (-> expr
             (assoc-in [:kids 0 :grad] (* (:grad expr) (get-in expr [:kids 1 :val])))
-            (assoc-in [:kids 1 :grad] (* (:grad expr) (get-in expr [:kids 0 :val]))))))
+            (assoc-in [:kids 1 :grad] (* (:grad expr) (get-in expr [:kids 0 :val]))))
+    math/tanh (-> expr
+                  (assoc-in [:kids 0 :grad] (* (:grad expr) (- 1 (math/pow (math/tanh (get-in expr [:kids 0 :val])) 2)))))))
 
 (defn propagate [expr]
   (clojure.walk/prewalk
@@ -40,7 +42,10 @@
 
 (comment
 
-  (tanh (value 1))
+  (backwards
+    (assoc (tanh (value 0.8814))
+           :grad
+           1))
 
   (propagate (mul (value -1)
                   (add (value 3)
