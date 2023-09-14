@@ -52,18 +52,22 @@
 (defn rand-val []
   (dec (rand 2)))
 
-(defn neuron [weight-count]
+(defn neuron [input-count]
   {:weights (->> rand-val
-                 (repeatedly weight-count)
+                 (repeatedly input-count)
                  (map value))
    :bias    (value (rand-val))})
 
-(defn fire [& params]
-  )
+(defn fire [neuron & inputs]
+  (->> (:weights neuron)
+       (map mul inputs)
+       (reduce add (:bias neuron))
+       tanh))
 
 (comment
 
-  (neuron 3)
+  (clojure.pprint/pprint
+    (fire (neuron 3) (value 1) (value 2) (value 3)))
 
   (def x1 (value 2))
   (def x2 (value 0))
