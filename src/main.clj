@@ -23,17 +23,23 @@
 (defn tanh [x]
   (defop math/tanh x))
 
+(defn assoc-kid-grad [expr kid grad]
+  (assoc-in expr [:kids kid :grad] (* (:grad expr) grad)))
+
+(defn get-kid-val [expr kid]
+  (get-in expr [:kids kid :val]))
+
 (defn backwards [expr]
   (condp = (:op expr)
-    nil expr
+    nil       expr
     +         (-> expr
-                  (assoc-in [:kids 0 :grad] (* (:grad expr) 1))
-                  (assoc-in [:kids 1 :grad] (* (:grad expr) 1)))
+                  (assoc-kid-grad 0 1)
+                  (assoc-kid-grad 1 1))
     *         (-> expr
-                  (assoc-in [:kids 0 :grad] (* (:grad expr) (get-in expr [:kids 1 :val])))
-                  (assoc-in [:kids 1 :grad] (* (:grad expr) (get-in expr [:kids 0 :val]))))
+                  (assoc-kid-grad 0 (get-kid-val expr 1))
+                  (assoc-kid-grad 1 (get-kid-val expr 0)))
     math/tanh (-> expr
-                  (assoc-in [:kids 0 :grad] (* (:grad expr) (- 1 (math/pow (:val expr) 2)))))))
+                  (assoc-kid-grad 0 (- 1 (math/pow (:val expr) 2))))))
 
 (defn init-grad [expr]
   (assoc expr :grad 1))
@@ -43,7 +49,21 @@
     backwards
     (init-grad expr)))
 
+(defn rand-val []
+  (dec (rand 2)))
+
+(defn neuron [weight-count]
+  {:weights (->> rand-val
+                 (repeatedly weight-count)
+                 (map value))
+   :bias    (value (rand-val))})
+
+(defn fire [& params]
+  )
+
 (comment
+
+  (neuron 3)
 
   (def x1 (value 2))
   (def x2 (value 0))
@@ -78,17 +98,17 @@
            :grad
            1))
 
-  (backward (assoc (mul (value 3)
+  (backwards (assoc (mul (value 3)
                         (value 2))
                    :grad
                    1))
 
-  (backward (assoc (add (value 3)
+  (backwards (assoc (add (value 3)
                      (value 2))
                    :grad
                    1))
 
-  (backward (value 3))
+  (backwards (value 3))
 
   (clojure.pprint/pprint
     (mul (value 4)
