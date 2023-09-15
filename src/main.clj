@@ -3,13 +3,13 @@
 
 (defn value [v]
   {:val  v
-   :grad 0})
+   :grad (atom 0)})
 
 (defn defop [op & params]
   {:val  (apply op (map :val params))
-   :kids (vec params)
+   :kids (set params)
    :op   op
-   :grad 0})
+   :grad (atom 0)})
 
 (defn mul-grad [old other]
   (+ old other))
@@ -23,8 +23,15 @@
 (defn tanh [x]
   (defop math/tanh x))
 
-(defn assoc-kid-grad [expr kid grad]
-  (assoc-in expr [:kids kid :grad] (* (:grad expr) grad)))
+(defn init-grad [expr]
+  (reset! (expr :grad) 1)
+  expr)
+
+(defn update-kid-grad! [expr kid grad]
+  (swap! (get-in expr [:kids kid :grad])
+         +
+         (* @(:grad expr) grad))
+  expr)
 
 (defn get-kid-val [expr kid]
   (get-in expr [:kids kid :val]))
@@ -33,16 +40,13 @@
   (condp = (:op expr)
     nil       expr
     +         (-> expr
-                  (assoc-kid-grad 0 1)
-                  (assoc-kid-grad 1 1))
+                  (update-kid-grad! 0 1)
+                  (update-kid-grad! 1 1))
     *         (-> expr
-                  (assoc-kid-grad 0 (get-kid-val expr 1))
-                  (assoc-kid-grad 1 (get-kid-val expr 0)))
+                  (update-kid-grad! 0 (get-kid-val expr 1))
+                  (update-kid-grad! 1 (get-kid-val expr 0)))
     math/tanh (-> expr
-                  (assoc-kid-grad 0 (- 1 (math/pow (:val expr) 2))))))
-
-(defn init-grad [expr]
-  (assoc expr :grad 1))
+                  (update-kid-grad! 0 (- 1 (math/pow (:val expr) 2))))))
 
 (defn propagate [expr]
   (clojure.walk/prewalk
@@ -86,6 +90,8 @@
 
   (-> (add a a) propagate)
 
+  (-> (add a a) backwards)
+
   (-> (mul (value 2) (value 3)) propagate)
 
   (-> 0.8814 value tanh init-grad backwards)
@@ -95,22 +101,18 @@
                        (value 2))))
 
   (clojure.walk/prewalk
-    backward
-    (assoc (mul (value -1)
-                (add (value 3)
-                     (value 2)))
-           :grad
-           1))
+    backwards
+    (init-grad (mul (value -1)
+                    (add (value 3)
+                         (value 2)))))
 
-  (backwards (assoc (mul (value 3)
-                        (value 2))
-                   :grad
-                   1))
+  (backwards (init-grad (mul (value 3)
+                             (value 2))))
 
-  (backwards (assoc (add (value 3)
-                     (value 2))
-                   :grad
-                   1))
+  (backwards (init-grad (add (value 3)
+                             (value 2))))
+
+  (backwards (add (value 3) (value 2)))
 
   (backwards (value 3))
 
@@ -118,14 +120,5 @@
     (mul (value 4)
          (add (value 3)
               (value 2))))
-
-  (defn f [x]
-    (- (* 3 (Math/pow x 2))
-      (* 4 x)
-      -5))
-    (f 3)
-
-  (def xs (range -5 5 1/4))
-  (def ys (map f xs))
 
   )
