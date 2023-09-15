@@ -7,7 +7,7 @@
 
 (defn defop [op & params]
   {:val  (apply op (map :val params))
-   :kids (set params)
+   :kids (vec params)
    :op   op
    :grad (atom 0)})
 
@@ -35,6 +35,8 @@
 
 (defn get-kid-val [expr kid]
   (get-in expr [:kids kid :val]))
+
+(defn debug [x] (print x) x)
 
 (defn backwards [expr]
   (condp = (:op expr)
@@ -89,8 +91,6 @@
   (def a (value 3))
 
   (-> (add a a) propagate)
-
-  (-> (add a a) backwards)
 
   (-> (mul (value 2) (value 3)) propagate)
 
