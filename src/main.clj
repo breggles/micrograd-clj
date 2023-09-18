@@ -38,7 +38,7 @@
 
 (defn debug [x] (print x) x)
 
-(defn backwards [expr]
+(defn backwards! [expr]
   (condp = (:op expr)
     nil       expr
     +         (-> expr
@@ -50,10 +50,12 @@
     math/tanh (-> expr
                   (update-kid-grad! 0 (- 1 (math/pow (:val expr) 2))))))
 
-(defn propagate [expr]
-  (clojure.walk/prewalk
-    backwards
-    (init-grad expr)))
+(defn propagate! [expr]
+  (->> expr
+      (init-grad)
+      (tree-seq :kids :kids)
+      (distinct)
+      (map backwards!)))
 
 (defn rand-val []
   (dec (rand 2)))
@@ -70,11 +72,6 @@
        (reduce add (:bias neuron))
        tanh))
 
-(comment
-
-  (clojure.pprint/pprint
-    (fire (neuron 3) (value 1) (value 2) (value 3)))
-
   (def x1 (value 2))
   (def x2 (value 0))
   (def w1 (value -3))
@@ -86,35 +83,51 @@
   (def n (add x1w1+x2w2 b))
   (def o (tanh n))
 
-  (propagate o)
+(comment
+
+  (get-in o [:kids 0 :grad])
+
+  (tree-seq :kids :kids (mul (value 4) (add (value 2) (value 3))))
+
+  (clojure.pprint/pprint
+    (fire (neuron 3) (value 1) (value 2) (value 3)))
+
+  (clojure.pprint/pprint (propagate! o))
 
   (def a (value 3))
 
-  (-> (add a a) propagate)
+  (-> (add a a) propagate!)
 
-  (-> (mul (value 2) (value 3)) propagate)
 
-  (-> 0.8814 value tanh init-grad backwards)
+  (def b a)
 
-  (propagate (mul (value -1)
-                  (add (value 3)
-                       (value 2))))
+  (= b a)
+
+  (reset! (:grad a) 1)
+
+  (-> (mul (value 2) (value 3)) propagate!)
+
+  (-> 0.8814 value tanh init-grad backwards!)
+
+  (propagate! (mul (value -1)
+                   (add (value 3)
+                        (value 2))))
 
   (clojure.walk/prewalk
-    backwards
+    backwards!
     (init-grad (mul (value -1)
                     (add (value 3)
                          (value 2)))))
 
-  (backwards (init-grad (mul (value 3)
+  (backwards! (init-grad (mul (value 3)
                              (value 2))))
 
-  (backwards (init-grad (add (value 3)
+  (backwards! (init-grad (add (value 3)
                              (value 2))))
 
-  (backwards (add (value 3) (value 2)))
+  (backwards! (add (value 3) (value 2)))
 
-  (backwards (value 3))
+  (backwards! (value 3))
 
   (clojure.pprint/pprint
     (mul (value 4)
