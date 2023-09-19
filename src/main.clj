@@ -51,11 +51,11 @@
                   (update-kid-grad! 0 (- 1 (math/pow (:val expr) 2))))))
 
 (defn propagate! [expr]
-  (->> expr
-      (init-grad)
-      (tree-seq :kids :kids)
-      (distinct)
-      (map backwards!)))
+  (->> (init-grad expr)
+       (tree-seq :kids :kids)
+       (distinct)
+       (map backwards!))
+  expr)
 
 (defn rand-val []
   (dec (rand 2)))
@@ -72,6 +72,8 @@
        (reduce add (:bias neuron))
        tanh))
 
+(comment
+
   (def x1 (value 2))
   (def x2 (value 0))
   (def w1 (value -3))
@@ -82,8 +84,6 @@
   (def x1w1+x2w2 (add x1w1 x2w2))
   (def n (add x1w1+x2w2 b))
   (def o (tanh n))
-
-(comment
 
   (get-in o [:kids 0 :grad])
 
@@ -97,7 +97,6 @@
   (def a (value 3))
 
   (-> (add a a) propagate!)
-
 
   (def b a)
 
