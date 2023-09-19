@@ -78,7 +78,27 @@
 (defn fire-layer [layer inputs]
   (map #(fire-neuron % inputs) layer))
 
+(defn multi-layer-perceptron [input-count neuron-counts]
+  (->> (cons input-count neuron-counts)
+       (partition 2 1)
+       (map (partial apply layer))))
+
+(defn fire-perceptron [perceptron inputs]
+  (reduce #(fire-layer %2 %1) inputs perceptron))
+
 (comment
+
+  (clojure.pprint/pprint
+    (fire-perceptron
+      (multi-layer-perceptron 1 [1])
+      [(value 2)]))
+
+  (clojure.pprint/pprint
+    (propagate!
+      (first
+        (fire-perceptron
+          (multi-layer-perceptron 3 [4 4 1])
+          [(value 2) (value 3) (value -1)]))))
 
   (fire-layer (layer 3 4) [(value 1) (value 2) (value 3)])
 
