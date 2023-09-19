@@ -66,13 +66,21 @@
                  (map value))
    :bias    (value (rand-val))})
 
-(defn fire [neuron & inputs]
+(defn fire-neuron [neuron inputs]
   (->> (:weights neuron)
        (map mul inputs)
        (reduce add (:bias neuron))
        tanh))
 
+(defn layer [input-count neuron-count]
+  (repeatedly neuron-count #(neuron input-count)))
+
+(defn fire-layer [layer inputs]
+  (map #(fire-neuron % inputs) layer))
+
 (comment
+
+  (fire-layer (layer 3 4) [(value 1) (value 2) (value 3)])
 
   (def x1 (value 2))
   (def x2 (value 0))
@@ -90,7 +98,7 @@
   (tree-seq :kids :kids (mul (value 4) (add (value 2) (value 3))))
 
   (clojure.pprint/pprint
-    (fire (neuron 3) (value 1) (value 2) (value 3)))
+    (fire-neuron (neuron 3) [(value 1) (value 2) (value 3)]))
 
   (clojure.pprint/pprint (propagate! o))
 
