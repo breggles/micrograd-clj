@@ -93,11 +93,17 @@
        (reduce add (:bias neuron))
        tanh))
 
+(defn neuron-params [neuron]
+  (conj (:weights neuron) (:bias neuron)))
+
 (defn layer [input-count neuron-count]
   (repeatedly neuron-count #(neuron input-count)))
 
 (defn fire-layer [layer inputs]
   (map #(fire-neuron % inputs) layer))
+
+(defn layer-params [layer]
+  (flatten (map neuron-params layer)))
 
 (defn multi-layer-perceptron [input-count neuron-counts]
   (->> (cons input-count neuron-counts)
@@ -107,9 +113,21 @@
 (defn fire-perceptron [perceptron inputs]
   (reduce #(fire-layer %2 %1) inputs perceptron))
 
+(defn perceptron-params [perceptron]
+  (set (flatten (map layer-params perceptron))))
+
 (defn loss [targets predictions]
   (reduce add (map (comp #(pow % (value 2)) sub) predictions targets)))
 
+(defn update-params [expr params]
+  (clojure.walk/postwalk
+    (fn [inner]
+      (if (params inner)
+        (update inner :val
+          (fn [old-val *grad] (+ old-val (* -0.01 @*grad)))
+          (:grad inner))
+        inner))
+    expr))
 
 (comment
 
@@ -131,6 +149,14 @@
 
   ((comp first :weights first first) mlp)
 
+  (update-params l (perceptron-params mlp))
+
+
+  (count (perceptron-params (multi-layer-perceptron 3 [4 4 1])))
+
+  (layer-params (layer 4 3))
+
+  (neuron-params (neuron 3))
 
   (def t (init-grad (value 3)))
 
