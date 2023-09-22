@@ -54,7 +54,8 @@
   (->> (init-grad expr)
        (tree-seq :kids :kids)
        (distinct)
-       (map backwards!))
+       (map backwards!)
+       (dorun))
   expr)
 
 (defn rand-val []
@@ -86,12 +87,33 @@
 (defn fire-perceptron [perceptron inputs]
   (reduce #(fire-layer %2 %1) inputs perceptron))
 
+(defn zero! [expr]
+  (->> (tree-seq :kids :kids expr)
+       (distinct)
+       (map (comp #(reset! % 0) :grad))
+       (dorun))
+  expr)
+
 (comment
+
+  (def t (init-grad (value 3)))
+
+  (zero! t)
+
+  (zero! (init-grad (value 3)))
 
   (clojure.pprint/pprint
     (fire-perceptron
       (multi-layer-perceptron 1 [1])
       [(value 2)]))
+
+  (def mlp (propagate!
+      (first
+        (fire-perceptron
+          (multi-layer-perceptron 3 [4 4 1])
+          [(value 2) (value 3) (value -1)]))))
+
+  (propagate! mlp)
 
   (clojure.pprint/pprint
     (propagate!
