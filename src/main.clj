@@ -20,6 +20,15 @@
 (defn mul [a b]
   (defop * a b))
 
+(defn neg [a]
+  (mul a (value -1)))
+
+(defn sub [a b]
+  (add a (neg b)))
+
+(defn pow [a b]
+  (defop math/pow a b))
+
 (defn tanh [x]
   (defop math/tanh x))
 
@@ -47,6 +56,10 @@
     *         (-> expr
                   (update-kid-grad! 0 (get-kid-val expr 1))
                   (update-kid-grad! 1 (get-kid-val expr 0)))
+    math/pow  (-> expr
+                  (update-kid-grad! 0 (math/pow (* (get-kid-val expr 1)
+                                                   (get-kid-val expr 0))
+                                                (dec (get-kid-val expr 1)))))
     math/tanh (-> expr
                   (update-kid-grad! 0 (- 1 (math/pow (:val expr) 2))))))
 
@@ -55,6 +68,13 @@
        (tree-seq :kids :kids)
        (distinct)
        (map backwards!)
+       (dorun))
+  expr)
+
+(defn zero! [expr]
+  (->> (tree-seq :kids :kids expr)
+       (distinct)
+       (map (comp #(reset! % 0) :grad))
        (dorun))
   expr)
 
@@ -87,14 +107,30 @@
 (defn fire-perceptron [perceptron inputs]
   (reduce #(fire-layer %2 %1) inputs perceptron))
 
-(defn zero! [expr]
-  (->> (tree-seq :kids :kids expr)
-       (distinct)
-       (map (comp #(reset! % 0) :grad))
-       (dorun))
-  expr)
+(defn loss [targets predictions]
+  (reduce add (map (comp #(pow % (value 2)) sub) predictions targets)))
+
 
 (comment
+
+  (def inputs (map (partial map (partial value))
+              [[2    3 -1  ]
+               [3   -1  0.5]
+               [0.5  1  1  ]
+               [1    1 -1  ]]))
+
+  (def targets (map (partial value) [1 -1 -1 1]))
+
+  (def mlp (multi-layer-perceptron 3 [4 4 1]))
+
+  (def predictions (map (comp first (partial fire-perceptron mlp)) inputs))
+
+  (def l (loss targets predictions))
+
+  (:val l) (:grad l) (propagate! l)
+
+  ((comp first :weights first first) mlp)
+
 
   (def t (init-grad (value 3)))
 
@@ -106,14 +142,6 @@
     (fire-perceptron
       (multi-layer-perceptron 1 [1])
       [(value 2)]))
-
-  (def mlp (propagate!
-      (first
-        (fire-perceptron
-          (multi-layer-perceptron 3 [4 4 1])
-          [(value 2) (value 3) (value -1)]))))
-
-  (propagate! mlp)
 
   (clojure.pprint/pprint
     (propagate!
@@ -155,6 +183,10 @@
   (reset! (:grad a) 1)
 
   (-> (mul (value 2) (value 3)) propagate!)
+
+  (-> (pow (value 2) (value 3))
+      (init-grad)
+      (backwards!))
 
   (-> 0.8814 value tanh init-grad backwards!)
 
