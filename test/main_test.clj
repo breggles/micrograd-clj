@@ -25,17 +25,17 @@
     (is (= [1 1 1] (->> (add (const 2) (const 3))
                         (forward!)
                         (backward!)
-                        (tree-seq :kids :kids)
-                        (map :grad)
-                        (map deref))))
-    (is (= [1 1 1] (->> (mul (const 4) (add (const 2) (const 3)))
-                        (forward!)
-                        (backward!)
-                        debug
-                        (tree-seq :kids :kids)
-                        (map :grad)
-                        (map deref)))))
+                        (grads))))
+    (is (= [1 5 4 4 4] (->> (mul (const 4) (add (const 2) (const 3)))
+                            (forward!)
+                            (backward!)
+                            (grads)))))
   )
+
+(defn- grads [expr]
+  (->> (tree-seq :kids :kids expr)
+       (map :grad)
+       (map deref)))
 
 (comment
 
