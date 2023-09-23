@@ -91,7 +91,7 @@
        (dorun))
   expr)
 
-(defn rand-val []
+(defn- rand-val []
   (dec (rand 2)))
 
 (defn neuron [input-count]
@@ -129,8 +129,14 @@
 (defn perceptron-params [perceptron]
   (set (flatten (map layer-params perceptron))))
 
+(defn predict [perceptron inputs]
+  (map first
+    (map (partial fire-perceptron perceptron) inputs)))
+
 (defn loss [targets predictions]
-  (reduce add (map (comp #(pow % (const 2)) sub) predictions targets)))
+  (->> (map sub predictions targets)
+       (map #(pow % (const 2)))
+       (reduce add)))
 
 (defn update-params [expr params]
   (clojure.walk/postwalk
@@ -154,11 +160,11 @@
 
   (def mlp (multi-layer-perceptron 3 [4 4 1]))
 
-  (def predictions (map (comp first (partial fire-perceptron mlp)) inputs))
+  (def predictions (predict mlp inputs))
 
   (def l (loss targets predictions))
 
-  (:val l) (:grad l) (backward! l)
+  (:val l) (:grad l) (backward! (forward! l))
 
   ((comp first :weights first first) mlp)
 

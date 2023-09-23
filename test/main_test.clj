@@ -15,12 +15,11 @@
   (testing "init-grad!"
     (is (= 1 @(:grad (init-grad! (const 0))))))
   (testing "derive-kids!"
-    (is (= [1 1] (->> (add (const 2) (const 3))
-                      (forward!)
-                      (init-grad!)
-                      (derive-kids!)
-                      (:kids)
-                      (map (comp deref :grad))))))
+    (is (= [1 1 1] (->> (add (const 2) (const 3))
+                        (forward!)
+                        (init-grad!)
+                        (derive-kids!)
+                        (grads)))))
   (testing "backward!"
     (is (= [1 1 1] (->> (add (const 2) (const 3))
                         (forward!)
@@ -30,6 +29,18 @@
                             (forward!)
                             (backward!)
                             (grads)))))
+  (testing "zero!"
+    (is (= [0 0 0] (->> (add (const 2) (const 3))
+                        (forward!)
+                        (backward!)
+                        (zero!)
+                        (grads)))))
+  (testing "neuron"
+    (is (let [n (neuron 2)]
+          (and (= [:val :grad :val :grad] (flatten (map keys (:weights (neuron 2)))))
+               (= [:val :grad] (keys (:bias n)))))))
+  (testing "loss"
+    (is (= 4.0 @(:val (forward! (loss [(const 2)] [(const 4)]))))))
   )
 
 (defn- grads [expr]
