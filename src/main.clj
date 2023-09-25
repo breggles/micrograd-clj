@@ -2,14 +2,14 @@
   (:require [clojure.math :as math]))
 
 (defn const [v]
-  {:val  (atom v)
-   :grad (atom 0)})
+  {:val*  (atom v)
+   :grad* (atom 0)})
 
 (defn- defop [op & params]
-  {:val  (atom nil)
-   :kids (vec params)
-   :op   op
-   :grad (atom 0)})
+  {:val*  (atom nil)
+   :kids  (vec params)
+   :op    op
+   :grad* (atom 0)})
 
 (defn add [a b]
   (defop + a b))
@@ -29,33 +29,34 @@
 (defn tanh [x]
   (defop math/tanh x))
 
+(defn- calc-val! [node]
+  (reset!
+    (:val* node)
+    (apply
+      (:op node)
+      (map (comp deref :val*) (:kids node)))))
+
 (defn forward! [expr]
   (->> (tree-seq :kids :kids expr)
        (distinct)
        (filter :kids)
        (reverse)
-       (map
-         (fn [node]
-           (reset!
-             (:val node)
-             (apply
-               (:op node)
-               (map (comp deref :val) (:kids node))))))
+       (map calc-val!)
        (dorun))
   expr)
 
 (defn init-grad! [expr]
-  (reset! (expr :grad) 1)
+  (reset! (expr :grad*) 1)
   expr)
 
 (defn update-kid-grad! [expr kid grad]
-  (swap! (get-in expr [:kids kid :grad])
+  (swap! (get-in expr [:kids kid :grad*])
          +
-         (* @(:grad expr) grad))
+         (* @(:grad* expr) grad))
   expr)
 
 (defn get-kid-val [expr kid]
-  @(get-in expr [:kids kid :val]))
+  @(get-in expr [:kids kid :val*]))
 
 (defn debug [x] (clojure.pprint/pprint x) x)
 
@@ -73,7 +74,7 @@
                                                    (get-kid-val expr 0))
                                                 (dec (get-kid-val expr 1)))))
     math/tanh (-> expr
-                  (update-kid-grad! 0 (- 1 (math/pow @(:val expr) 2))))))
+                  (update-kid-grad! 0 (- 1 (math/pow @(:val* expr) 2))))))
 
 (defn backward! [expr]
   (->> (init-grad! expr)
@@ -87,7 +88,7 @@
 (defn zero! [expr]
   (->> (tree-seq :kids :kids expr)
        (distinct)
-       (map (comp #(reset! % 0) :grad))
+       (map (comp #(reset! % 0) :grad*))
        (dorun))
   expr)
 
@@ -100,7 +101,7 @@
                  (map const))
    :bias    (const (rand-val))})
 
-(defn fire-neuron [neuron inputs]
+(defn ready-neuron [neuron inputs]
   (->> (:weights neuron)
        (map mul inputs)
        (reduce add (:bias neuron))
@@ -112,8 +113,8 @@
 (defn layer [input-count neuron-count]
   (repeatedly neuron-count #(neuron input-count)))
 
-(defn fire-layer [layer inputs]
-  (map #(fire-neuron % inputs) layer))
+(defn ready-layer [layer inputs]
+  (map #(ready-neuron % inputs) layer))
 
 (defn layer-params [layer]
   (flatten (map neuron-params layer)))
@@ -123,15 +124,15 @@
        (partition 2 1)
        (map (partial apply layer))))
 
-(defn fire-perceptron [perceptron inputs]
-  (reduce #(fire-layer %2 %1) inputs perceptron))
+(defn ready-perceptron [perceptron inputs]
+  (reduce #(ready-layer %2 %1) inputs perceptron))
 
 (defn perceptron-params [perceptron]
   (set (flatten (map layer-params perceptron))))
 
-(defn predict [perceptron inputs]
+(defn predict [perceptron inputs-coll]
   (map first
-    (map (partial fire-perceptron perceptron) inputs)))
+    (map (partial ready-perceptron perceptron) inputs-coll)))
 
 (defn loss [targets predictions]
   (->> (map sub predictions targets)
@@ -142,29 +143,31 @@
   (clojure.walk/postwalk
     (fn [inner]
       (if (params inner)
-        (update inner :val
+        (update inner :val*
           (fn [old-val *grad] (+ old-val (* -0.01 @*grad)))
-          (:grad inner))
+          (:grad* inner))
         inner))
     expr))
 
 (comment
 
-  (def inputs (map (partial map (partial const))
+  (def inputs (map (partial map const)
               [[2    3 -1  ]
                [3   -1  0.5]
                [0.5  1  1  ]
                [1    1 -1  ]]))
 
-  (def targets (map (partial const) [1 -1 -1 1]))
+  (def targets (map const [1 -1 -1 1]))
 
   (def mlp (multi-layer-perceptron 3 [4 4 1]))
 
   (def predictions (predict mlp inputs))
 
+  (map :val* predictions)
+
   (def l (loss targets predictions))
 
-  (:val l) (:grad l) (backward! (forward! l))
+  (:val* l) (:grad* l) (backward! (forward! l))
 
   ((comp first :weights first first) mlp)
 
@@ -184,18 +187,18 @@
   (zero! (init-grad! (const 3)))
 
   (clojure.pprint/pprint
-    (fire-perceptron
+    (ready-perceptron
       (multi-layer-perceptron 1 [1])
       [(const 2)]))
 
   (clojure.pprint/pprint
     (backward!
       (first
-        (fire-perceptron
+        (ready-perceptron
           (multi-layer-perceptron 3 [4 4 1])
           [(const 2) (const 3) (const -1)]))))
 
-  (fire-layer (layer 3 4) [(const 1) (const 2) (const 3)])
+  (ready-layer (layer 3 4) [(const 1) (const 2) (const 3)])
 
   (def x1 (const 2))
   (def x2 (const 0))
@@ -208,12 +211,12 @@
   (def n (add x1w1+x2w2 b))
   (def o (tanh n))
 
-  (get-in o [:kids 0 :grad])
+  (get-in o [:kids 0 :grad*])
 
   (tree-seq :kids :kids (mul (const 4) (add (const 2) (const 3))))
 
   (clojure.pprint/pprint
-    (fire-neuron (neuron 3) [(const 1) (const 2) (const 3)]))
+    (ready-neuron (neuron 3) [(const 1) (const 2) (const 3)]))
 
   (clojure.pprint/pprint (backward! o))
 
@@ -225,7 +228,7 @@
 
   (= b a)
 
-  (reset! (:grad a) 1)
+  (reset! (:grad* a) 1)
 
   (-> (mul (const 2) (const 3)) backward!)
 
