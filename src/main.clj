@@ -38,9 +38,9 @@
 
 (defn forward! [expr]
   (->> (tree-seq :kids :kids expr)
-       (distinct)
-       (filter :kids)
+       (filter :op)
        (reverse)
+       (distinct)
        (map calc-val!)
        (dorun))
   expr)
@@ -213,7 +213,13 @@
 
   (get-in o [:kids 0 :grad*])
 
-  (tree-seq :kids :kids (mul (const 4) (add (const 2) (const 3))))
+  (def a (mul (add (const 4) (const 5)) (add (const 2) (const 3))))
+
+  (->> (tree-seq :kids :kids a)
+       (distinct)
+       (filter :op)
+       (reverse)
+       (map calc-val!))
 
   (clojure.pprint/pprint
     (ready-neuron (neuron 3) [(const 1) (const 2) (const 3)]))

@@ -22,9 +22,14 @@
   (testing "add"
     (is (= nil @(:val* (add (const 2) (const 3)))))
     (is (= 0 @(:grad* (add (const 2) (const 3))))))
+  (testing "tanh"
+    (is (= nil @(:val* (tanh (const 2)))))
+    (is (= 0 @(:grad* (tanh (const 2))))))
   (testing "forward!"
     (is (= 5 @(:val* (forward! (add (const 2) (const 3))))))
-    (is (= 20 @(:val* (forward! (mul (const 4) (add (const 2) (const 3))))))))
+    (is (= 20 @(:val* (forward! (mul (const 4) (add (const 2) (const 3)))))))
+    (is (clojure.string/starts-with? (str @(:val* (forward! (tanh (const 2)))))
+                                     "0.96402")))
   (testing "init-grad!"
     (is (= 1 @(:grad* (init-grad! (const 0))))))
   (testing "derive-kids!"
@@ -63,7 +68,12 @@
   (testing "loss"
     (is (= 4.0 @(:val* (forward! (loss [(const 2)] [(const 4)])))))
     (is (not= nil (forward! (loss [(const 1)] (ready-perceptron (multi-layer-perceptron 1 [1]) [(const 3)])))))
-    (is (not= nil (forward! (loss [(const 4)] (ready-perceptron (multi-layer-perceptron 2 [2 1]) [(const 3) (const 5)]))))))
+    (is (not= nil
+              (:val* (let [mlp (multi-layer-perceptron 2 [2 2 1])]
+                (forward!
+                  (loss [(const 4) (const 5)]
+                        [(first (ready-perceptron mlp [(const 3) (const 5)]))
+                         (first (ready-perceptron mlp [(const 1) (const -1)]))])))))))
   )
 
 
