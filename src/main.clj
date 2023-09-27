@@ -168,11 +168,15 @@
     (forward! l)
     @(:val* l))
 
-  (do
+  (map :val* predictions)
+
+  (while (> @(:val* l) 0.001)
     (zero! l)
     (backward! l)
     (update-params! (perceptron-params mlp))
-    nil)
+    (forward! l))
+
+  @(:val* l)
 
 
   (count (perceptron-params (multi-layer-perceptron 3 [4 4 1])))
