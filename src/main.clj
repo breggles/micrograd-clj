@@ -1,6 +1,8 @@
 (ns main
   (:require [clojure.math :as math]))
 
+(defn debug [x] (clojure.pprint/pprint x) x)
+
 (defn const [v]
   {:val*  (atom v)
    :grad* (atom 0)})
@@ -49,16 +51,14 @@
   (reset! (expr :grad*) 1)
   expr)
 
-(defn update-kid-grad! [expr kid grad]
+(defn- update-kid-grad! [expr kid grad]
   (swap! (get-in expr [:kids kid :grad*])
          +
          (* @(:grad* expr) grad))
   expr)
 
-(defn get-kid-val [expr kid]
+(defn- get-kid-val [expr kid]
   @(get-in expr [:kids kid :val*]))
-
-(defn debug [x] (clojure.pprint/pprint x) x)
 
 (defn derive-kids! [expr]
   (condp = (:op expr)
@@ -141,7 +141,7 @@
 (defn- update-param! [param]
   (swap!
     (:val* param)
-    (fn [curr-val grad] (+ curr-val (* -0.01 grad)))
+    (fn [curr-val grad] (+ curr-val (* -0.1 grad)))
     @(:grad* param)))
 
 (defn update-params! [params]
@@ -168,7 +168,7 @@
     (forward! l)
     @(:val* l))
 
-  (map :val* predictions)
+  (map (comp deref :val*) predictions)
 
   (while (> @(:val* l) 0.001)
     (zero! l)
@@ -177,6 +177,8 @@
     (forward! l))
 
   @(:val* l)
+
+  (forward! (first (ready-perceptron mlp [1 1 1])))
 
 
   (count (perceptron-params (multi-layer-perceptron 3 [4 4 1])))
