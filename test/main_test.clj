@@ -69,7 +69,7 @@
     (is (= 4.0 @(:val* (forward! (loss [(const 2)] [(const 4)])))))
     (is (not= nil (forward! (loss [(const 1)] (ready-perceptron (multi-layer-perceptron 1 [1]) [(const 3)])))))
     (is (not= nil
-              (:val* (let [mlp (multi-layer-perceptron 2 [2 2 1])]
+              ((juxt :val* :grad*) (let [mlp (multi-layer-perceptron 2 [2 2 1])]
                 (forward!
                   (loss [(const 4) (const 5)]
                         [(first (ready-perceptron mlp [(const 3) (const 5)]))

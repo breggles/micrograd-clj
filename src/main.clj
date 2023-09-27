@@ -81,8 +81,7 @@
        (tree-seq :kids :kids)
        (distinct)
        (map derive-kids!)
-       (dorun)
-       )
+       (dorun))
   expr)
 
 (defn zero! [expr]
@@ -139,15 +138,18 @@
        (map #(pow % (const 2)))
        (reduce add)))
 
-(defn update-params [expr params]
-  (clojure.walk/postwalk
-    (fn [inner]
-      (if (params inner)
-        (update inner :val*
-          (fn [old-val *grad] (+ old-val (* -0.01 @*grad)))
-          (:grad* inner))
-        inner))
-    expr))
+(defn- update-param [node]
+  (swap!
+    (:val* node)
+    (fn [curr-val grad] (+ curr-val (* -0.01 grad)))
+    @(:grad* node)))
+
+(defn update-params! [expr params]
+  (->> (tree-seq :kids :kids expr)
+       (distinct)
+       (filter params)
+       (map update-param)))
+
 
 (comment
 
@@ -171,7 +173,7 @@
 
   ((comp first :weights first first) mlp)
 
-  (update-params l (perceptron-params mlp))
+  (update-params! l (perceptron-params mlp))
 
 
   (count (perceptron-params (multi-layer-perceptron 3 [4 4 1])))
