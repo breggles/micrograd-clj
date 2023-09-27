@@ -138,17 +138,14 @@
        (map #(pow % (const 2)))
        (reduce add)))
 
-(defn- update-param [node]
+(defn- update-param! [param]
   (swap!
-    (:val* node)
+    (:val* param)
     (fn [curr-val grad] (+ curr-val (* -0.01 grad)))
-    @(:grad* node)))
+    @(:grad* param)))
 
-(defn update-params! [expr params]
-  (->> (tree-seq :kids :kids expr)
-       (distinct)
-       (filter params)
-       (map update-param)))
+(defn update-params! [params]
+  (dorun (map update-param! params)))
 
 
 (comment
@@ -165,15 +162,17 @@
 
   (def predictions (predict mlp inputs))
 
-  (map :val* predictions)
-
   (def l (loss targets predictions))
 
-  (:val* l) (:grad* l) (backward! (forward! l))
+  (do
+    (forward! l)
+    @(:val* l))
 
-  ((comp first :weights first first) mlp)
-
-  (update-params! l (perceptron-params mlp))
+  (do
+    (zero! l)
+    (backward! l)
+    (update-params! (perceptron-params mlp))
+    nil)
 
 
   (count (perceptron-params (multi-layer-perceptron 3 [4 4 1])))
