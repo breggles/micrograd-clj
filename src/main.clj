@@ -178,7 +178,8 @@
 
   @(:val* l)
 
-  (forward! (first (ready-perceptron mlp [1 1 1])))
+
+  (forward! (first (ready-perceptron mlp (map const [1 1 1]))))
 
 
   (count (perceptron-params (multi-layer-perceptron 3 [4 4 1])))
