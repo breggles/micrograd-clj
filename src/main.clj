@@ -1,5 +1,6 @@
 (ns main
-  (:require [clojure.math :as math]))
+  (:require [clojure.math :as math]
+            [clojure.inspector :as insp]))
 
 (defn debug [x] (clojure.pprint/pprint x) x)
 
@@ -178,6 +179,7 @@
 
   @(:val* l)
 
+  (clojure.inspector/inspect-tree l)
 
   (forward! (first (ready-perceptron mlp (map const [1 1 1]))))
 
