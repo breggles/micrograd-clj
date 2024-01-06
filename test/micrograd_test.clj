@@ -1,6 +1,6 @@
-(ns main-test
+(ns micrograd-test
   (:require [clojure.test :refer [deftest is testing]]
-            [main :refer :all]))
+            [micrograd :refer :all]))
 
 (defn- grads [expr]
   (->> (tree-seq :kids :kids expr)

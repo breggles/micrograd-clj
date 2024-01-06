@@ -1,8 +1,8 @@
-(ns main
+(ns micrograd
   (:require [clojure.math :as math]
             [clojure.inspector :as insp]))
 
-(defn debug [x] (clojure.pprint/pprint x) x)
+(defn- debug [x] (clojure.pprint/pprint x) x)
 
 (defn const [v]
   {:val*  (atom v)
