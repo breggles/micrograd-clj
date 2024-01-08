@@ -22,6 +22,12 @@
   (testing "add"
     (is (= nil @(:val* (add (const 2) (const 3)))))
     (is (= 0 @(:grad* (add (const 2) (const 3))))))
+  (testing "div"
+    (is (= 2 @(:val* (forward! (div (const 6) (const 3)))))))
+  (testing "log"
+    (is (= 0.6931471805599453 @(:val* (forward! (log (const 2))))))
+    (is (= 1.4426950408889634 @(get-in (backward! (forward! (log (const 2))))
+                                       [:kids 0 :grad*]))))
   (testing "tanh"
     (is (= nil @(:val* (tanh (const 2)))))
     (is (= 0 @(:grad* (tanh (const 2))))))

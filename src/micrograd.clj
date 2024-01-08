@@ -4,34 +4,6 @@
 
 (defn- debug [x] (clojure.pprint/pprint x) x)
 
-(defn const [v]
-  {:val*  (atom v)
-   :grad* (atom 0)})
-
-(defn- defop [op & params]
-  {:val*  (atom nil)
-   :kids  (vec params)
-   :op    op
-   :grad* (atom 0)})
-
-(defn add [a b]
-  (defop + a b))
-
-(defn mul [a b]
-  (defop * a b))
-
-(defn neg [a]
-  (mul a (const -1)))
-
-(defn sub [a b]
-  (add a (neg b)))
-
-(defn pow [a b]
-  (defop math/pow a b))
-
-(defn tanh [x]
-  (defop math/tanh x))
-
 (defn- calc-val! [node]
   (reset!
     (:val* node)
@@ -47,6 +19,40 @@
        (map calc-val!)
        (dorun))
   expr)
+
+(defn const [v]
+  {:val*  (atom v)
+   :grad* (atom 0)})
+
+(defn- defop [op & params]
+  {:val*  (atom nil)
+   :kids  (vec (flatten params))
+   :op    op
+   :grad* (atom 0)})
+
+(defn add [& params]
+  (defop + params))
+
+(defn mul [a b]
+  (defop * a b))
+
+(defn neg [a]
+  (mul a (const -1)))
+
+(defn sub [a b]
+  (add a (neg b)))
+
+(defn div [a b]
+  (mul a (const (/ 1 @(:val* (forward! b))))))
+
+(defn pow [a b]
+  (defop math/pow a b))
+
+(defn log [a]
+  (defop math/log a))
+
+(defn tanh [x]
+  (defop math/tanh x))
 
 (defn init-grad! [expr]
   (reset! (expr :grad*) 1)
@@ -74,8 +80,11 @@
                   (update-kid-grad! 0 (math/pow (* (get-kid-val expr 1)
                                                    (get-kid-val expr 0))
                                                 (dec (get-kid-val expr 1)))))
+    math/log  (-> expr
+                  (update-kid-grad! 0 (/ 1 @(:val* expr))))
     math/tanh (-> expr
-                  (update-kid-grad! 0 (- 1 (math/pow @(:val* expr) 2))))))
+                  (update-kid-grad! 0 (- 1 (math/pow @(:val* expr) 2))))
+    ))
 
 (defn backward! [expr]
   (->> (init-grad! expr)
