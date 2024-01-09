@@ -48,6 +48,9 @@
 (defn pow [a b]
   (defop math/pow a b))
 
+(defn exp [a]
+  (defop math/exp a))
+
 (defn log [a]
   (defop math/log a))
 
@@ -70,16 +73,21 @@
 (defn derive-kids! [expr]
   (condp = (:op expr)
     nil       expr
-    +         (-> expr
-                  (update-kid-grad! 0 1)
-                  (update-kid-grad! 1 1))
+    +         (do
+                (mapv #(update-kid-grad! expr % 1) (range (count (:kids expr))))
+                expr)
     *         (-> expr
                   (update-kid-grad! 0 (get-kid-val expr 1))
                   (update-kid-grad! 1 (get-kid-val expr 0)))
     math/pow  (-> expr
                   (update-kid-grad! 0 (math/pow (* (get-kid-val expr 1)
                                                    (get-kid-val expr 0))
-                                                (dec (get-kid-val expr 1)))))
+                                                (dec (get-kid-val expr 1))))
+                  (update-kid-grad! 1 (* (math/pow (get-kid-val expr 0)
+                                                   (get-kid-val expr 1))
+                                         (math/log (get-kid-val expr 0)))))
+    math/exp  (-> expr
+                  (update-kid-grad! 0 (math/exp (get-kid-val expr 0))))
     math/log  (-> expr
                   (update-kid-grad! 0 (/ 1 @(:val* expr))))
     math/tanh (-> expr
