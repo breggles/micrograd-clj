@@ -42,11 +42,11 @@
 (defn sub [a b]
   (add a (neg b)))
 
-(defn div [a b]
-  (mul a (const (/ 1 @(:val* (forward! b))))))
-
 (defn pow [a b]
   (defop math/pow a b))
+
+(defn div [a b]
+  (mul a (pow b (const -1))))
 
 (defn exp [a]
   (defop math/exp a))
@@ -164,6 +164,19 @@
 
 (defn update-params! [params]
   (dorun (map update-param! params)))
+
+(defn one-hot [size n]
+  (assoc (vec (repeat size (const 0)))
+         n
+         (const 1)))
+
+(defn normalize-row [row]
+  (let [row-sum (apply add row)]
+    (mapv #(div % row-sum) row)))
+
+(defn mean [xs]
+  (div (apply add xs)
+       (const (count xs))))
 
 
 (comment
